@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Warum muss ich beim Velo treten?</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 1rem;
+      color: #222;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.3rem;
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin: 0.8rem 0 0.3rem;
+    }
+    .layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    #controls, #info {
+      background: white;
+      padding: 0.8rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    #controls {
+      flex: 1 1 260px;
+      max-width: 320px;
+    }
+    #info {
+      flex: 1 1 260px;
+      min-width: 240px;
+    }
+    #simContainer {
+      flex: 2 1 400px;
+      background: white;
+      border-radius: 8px;
+      padding: 0.8rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    label {
+      font-size: 0.9rem;
+      display: block;
+      margin-top: 0.4rem;
+    }
+    input[type="range"], select {
+      width: 100%;
+      margin-top: 0.2rem;
+    }
+    .value {
+      font-weight: 600;
+      margin-left: 0.2rem;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 100%;
+      max-width: 700px;
+      display: block;
+      margin: 0.5rem auto 0;
+      background: #eef3ff;
+    }
+    .numbers-table {
+      font-size: 0.85rem;
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .numbers-table th, .numbers-table td {
+      border-bottom: 1px solid #ddd;
+      padding: 0.2rem 0.3rem;
+      text-align: left;
+    }
+    .numbers-table th {
+      font-weight: 600;
+    }
+    .scenario-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+    .scenario-buttons button,
+    .btn-row button {
+      font-size: 0.8rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      cursor: pointer;
+    }
+    .scenario-buttons button:hover,
+    .btn-row button:hover {
+      background: #e7f0ff;
+    }
+    .explanation {
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+    }
+    small {
+      font-size: 0.78rem;
+      color: #555;
+    }
+    .btn-row {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Warum wird das Velo langsamer, wenn ich nicht mehr trete?</h1>
+  <p style="font-size:0.9rem;max-width:900px">
+    Du stellst die <strong>Tretkraft</strong> ein (in Newton). Die Geschwindigkeit entsteht automatisch aus
+    allen Kräften. Das Rad rollt sichtbar.<br>
+    <strong>Rot</strong>: Tretkraft &nbsp; <strong>Blau</strong>: Luftwiderstand &nbsp;
+    <strong>Orange</strong>: Rollwiderstand &nbsp; <strong>Grün</strong>: Hangabtriebskraft.
+  </p>
+
+  <div class="layout">
+    <div id="controls">
+      <h2>Einstellungen</h2>
+
+      <label for="pedal">
+        Tretkraft / Vortriebskraft:
+        <span class="value" id="pedalVal">20</span> N
+        <small>(0 N = nicht treten)</small>
+      </label>
+      <!-- bis 80 N -->
+      <input type="range" id="pedal" min="0" max="80" step="1" value="20">
+
+      <label for="slope">
+        Steigung / Gefälle:
+        <span class="value" id="slopeVal">0</span> %
+        <small>(+ = bergauf, − = bergab)</small>
+      </label>
+      <input type="range" id="slope" min="-10" max="10" step="1" value="0">
+
+      <label for="surface">
+        Untergrund (Rollwiderstand):
+      </label>
+      <select id="surface">
+        <option value="0.003">Rennrad, glatter Asphalt (c_rr ≈ 0.003)</option>
+        <option value="0.006" selected>Alltagsvelo, normale Straße (c_rr ≈ 0.006)</option>
+        <option value="0.02">MTB, Schotterweg (c_rr ≈ 0.02)</option>
+        <option value="0.05">MTB, Wiese / weicher Boden (c_rr ≈ 0.05)</option>
+      </select>
+
+      <label for="posture">
+        Luftwiderstand (Haltung):
+      </label>
+      <select id="posture">
+        <option value="0.7">Aufrecht sitzen (große Stirnfläche)</option>
+        <option value="0.5" selected>Normal (c_w·A ≈ 0.5 m²)</option>
+        <option value="0.35">Sportlich / klein machen</option>
+      </select>
+
+      <div class="btn-row">
+        <button type="button" id="pauseBtn">Pause</button>
+        <button type="button" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="scenario-buttons">
+        <button type="button" data-scenario="city">Gemütlich in der Stadt</button>
+        <button type="button" data-scenario="fast">Schnell auf der Straße</button>
+        <button type="button" data-scenario="grass">MTB auf Wiese</button>
+        <button type="button" data-scenario="hill">Bergab ohne Treten</button>
+      </div>
+    </div>
+
+    <div id="simContainer">
+      <h2>Rad auf der Straße – Kräfte entlang der Fahrbahn</h2>
+      <canvas id="canvas" width="700" height="350"></canvas>
+      <p class="explanation" id="shortText"></p>
+      <small>
+        Annahmen: Gesamtmasse (Fahrerin + Velo) ≈ 80 kg, Luftdichte ρ ≈ 1.2 kg/m³.
+        Ab etwa 15 km/h wird der Luftwiderstand zur wichtigsten bremsenden Kraft (außer bei starkem Gefälle).
+      </small>
+    </div>
+
+    <div id="info">
+      <h2>Zahlen zur Situation</h2>
+      <table class="numbers-table">
+        <tbody>
+          <tr>
+            <th>Geschwindigkeit</th>
+            <td id="vVal">–</td>
+          </tr>
+          <tr>
+            <th>Hangabtriebskraft</th>
+            <td id="FgVal">–</td>
+          </tr>
+          <tr>
+            <th>Rollwiderstand</th>
+            <td id="FrVal">–</td>
+          </tr>
+          <tr>
+            <th>Luftwiderstand</th>
+            <td id="FlVal">–</td>
+          </tr>
+          <tr>
+            <th>Tretkraft / Vortrieb</th>
+            <td id="FtVal">–</td>
+          </tr>
+          <tr>
+            <th>Tretleistung (geschätzt)</th>
+            <td id="PVal">–</td>
+          </tr>
+          <tr>
+            <th>Stärkste Kraft</th>
+            <td id="strongestVal">–</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="explanation" id="pedalText"></p>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const pedalSlider = document.getElementById("pedal");
+    const slopeSlider = document.getElementById("slope");
+    const surfaceSelect = document.getElementById("surface");
+    const postureSelect = document.getElementById("posture");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const pedalVal = document.getElementById("pedalVal");
+    const slopeVal = document.getElementById("slopeVal");
+
+    const vVal = document.getElementById("vVal");
+    const FgVal = document.getElementById("FgVal");
+    const FrVal = document.getElementById("FrVal");
+    const FlVal = document.getElementById("FlVal");
+    const FtVal = document.getElementById("FtVal");
+    const PVal = document.getElementById("PVal");
+    const strongestVal = document.getElementById("strongestVal");
+
+    const shortText = document.getElementById("shortText");
+    const pedalText = document.getElementById("pedalText");
+
+    const g = 9.81;   // m/s²
+    const m = 80;     // kg (Fahrerin + Velo)
+    const rho = 1.2;  // kg/m³
+
+    // "Rad-Physik"
+    const wheelRadiusPx = 40;    // Pixel
+    const wheelRadiusM  = 0.35;  // realistische Radgröße in m
+    const pixelsPerMeter = 7;    // Skala für Straße
+
+    // Simulationszustand
+    let v = 0;           // m/s (kann jetzt auch negativ werden = rückwärts rollen)
+    let s = 0;           // Strecke entlang der Straße in m
+    const maxV = 25;     // m/s ≈ 90 km/h, Kappung
+    let running = true;
+    let lastTime = null;
+
+    function drawArrow(ctx, x1, y1, x2, y2, color) {
+      const headLength = 10;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const angle = Math.atan2(dy, dx);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(
+        x2 - headLength * Math.cos(angle - Math.PI / 6),
+        y2 - headLength * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        x2 - headLength * Math.cos(angle + Math.PI / 6),
+        y2 - headLength * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function formatForce(F) {
+      return Math.round(F) + " N";
+    }
+
+    function describePedalForce(F) {
+      const f = Math.abs(F);
+      if (f < 5) return "kaum Treten";
+      if (f < 15) return "leichtes Treten (gemütlich)";
+      if (f < 30) return "mittleres Treten (normales Fahren)";
+      if (f < 55) return "kräftiges Treten (sportlich)";
+      return "sehr kräftiges Treten (Sprint/Berg)";
+    }
+
+    function formatPower(P) {
+      if (P < 10) return "≈ 0 W (fast kein Aufwand)";
+      if (P < 120) return Math.round(P) + " W (locker rollen)";
+      if (P < 220) return Math.round(P) + " W (Alltagsfahrt)";
+      if (P < 320) return Math.round(P) + " W (sportlich)";
+      return Math.round(P) + " W (sehr anstrengend)";
+    }
+
+    function updateTexts(forces, v) {
+      const { F_g, F_roll, F_air, F_t } = forces;
+      const speed = Math.abs(v);
+      const v_kmh = speed * 3.6;
+
+      vVal.textContent = v_kmh.toFixed(1) + " km/h";
+      FgVal.textContent = formatForce(F_g);
+      FrVal.textContent = formatForce(Math.abs(F_roll));
+      FlVal.textContent = formatForce(Math.abs(F_air));
+      FtVal.textContent = formatForce(F_t) + " (" + describePedalForce(F_t) + ")";
+
+      const P = Math.abs(F_t * v); // einfache Abschätzung
+      PVal.textContent = formatPower(P);
+
+      // Stärkste Kraft bestimmen (Beträge vergleichen)
+      const entries = [
+        { name: "Hangabtriebskraft (bergab)", value: Math.abs(F_g) },
+        { name: "Rollwiderstand", value: Math.abs(F_roll) },
+        { name: "Luftwiderstand", value: Math.abs(F_air) },
+        { name: "Tretkraft", value: Math.abs(F_t) }
+      ].sort((a, b) => b.value - a.value);
+
+      strongestVal.textContent =
+        entries[0].name + " (" + Math.round(entries[0].value) + " N)";
+
+      // Erklärungstexte
+      let text = "";
+      if (v_kmh < 1) {
+        text = "Das Rad steht fast still. Ohne Vortriebskraft (Treten oder starkes Gefälle) setzt sich nichts in Bewegung.";
+      } else if (v_kmh < 10) {
+        text = "Du fährst langsam. Rollwiderstand und Reibung sind wichtig, die Luft bremst erst wenig.";
+      } else if (v_kmh < 20) {
+        text = "Du fährst zügig. Der Luftwiderstand wird immer wichtiger.";
+      } else {
+        text = "Du bist schnell unterwegs. Jetzt ist die Luft fast immer die stärkste Bremskraft.";
+      }
+
+      const slopePercent = parseFloat(slopeSlider.value);
+      if (slopePercent > 0) {
+        text += " Regler plus: Straße geht bergauf – die Hangabtriebskraft wirkt gegen deine Fahrtrichtung und bremst.";
+      } else if (slopePercent < 0) {
+        text += " Regler minus: Straße geht bergab – die Hangabtriebskraft schiebt dich zusätzlich nach vorne.";
+      } else {
+        text += " Auf der waagrechten Straße gibt es keine Hangabtriebskraft entlang der Fahrtrichtung.";
+      }
+      shortText.textContent = text;
+
+      if (F_t <= 0.5 && v_kmh < 0.5) {
+        pedalText.textContent =
+          "Du trittst praktisch nicht und fährst kaum – Rollwiderstand und Reibung stoppen dich schnell.";
+      } else if (F_t <= 0.5 && v_kmh > 0.5) {
+        pedalText.textContent =
+          "Ohne Tretkraft wirst du durch Rollwiderstand und Luftwiderstand langsam abgebremst – außer wenn das Gefälle stark genug ist.";
+      } else {
+        pedalText.textContent =
+          "Je größer deine Tretkraft, desto stärker kannst du die bremsenden Kräfte ausgleichen und desto höher kann deine Geschwindigkeit werden.";
+      }
+    }
+
+    function computeForces() {
+      const slopePercent = parseFloat(slopeSlider.value); // + = bergauf, - = bergab
+      const c_rr = parseFloat(surfaceSelect.value);
+      const cwA = parseFloat(postureSelect.value);
+      const F_t = parseFloat(pedalSlider.value);          // Vortriebskraft (immer nach vorne)
+
+      // Hangabtrieb:
+      // slope < 0 (bergab) -> F_g > 0 (schiebt nach vorne)
+      // slope > 0 (bergauf) -> F_g < 0 (bremst)
+      const F_g = -m * g * (slopePercent / 100);
+
+      // Roll- und Luftwiderstand: entgegen aktueller Bewegungsrichtung
+      const speed = Math.abs(v);
+      const sign = speed > 0.01 ? Math.sign(v) : 0; // 0 wenn praktisch still
+
+      let F_roll = 0;
+      let F_air = 0;
+      const N = m * g; // Normalkraft ~ mg (für kleine Steigungen)
+
+      if (sign !== 0) {
+        F_roll = -sign * c_rr * N;
+        const F_air_mag = 0.5 * rho * cwA * speed * speed;
+        F_air = -sign * F_air_mag;
+      }
+
+      // einfache mechanische Reibung im Antrieb: ∝ v, entgegen Bewegungsrichtung
+      const k_mech = 0.8; // N pro (m/s), grob
+      const F_mech = sign !== 0 ? -sign * k_mech * speed : 0;
+
+      return { F_g, F_roll, F_air, F_t, F_mech };
+    }
+
+    function render(forces) {
+      const slopePercent = parseFloat(slopeSlider.value);
+      // + = bergauf, − = bergab, für die Darstellung Vorzeichen umdrehen
+      const alpha = -Math.atan(slopePercent / 100);
+      const { F_g, F_roll, F_air, F_t } = forces;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const baseX = canvas.width * 0.2;
+      const baseY = canvas.height * 0.7;
+
+      ctx.save();
+      ctx.translate(baseX, baseY);
+      ctx.rotate(alpha);
+
+      // Straße
+      ctx.strokeStyle = "#555";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-400, 0);
+      ctx.lineTo(400, 0);
+      ctx.stroke();
+
+      // Radposition entlang der Straße (Loop über Modulo, auch für negative s)
+      const rawX = s * pixelsPerMeter;
+      const wheelX = ((rawX % 400) + 400) % 400;
+
+      // Rad + Kräfte
+      ctx.save();
+      ctx.translate(wheelX, 0);
+
+      // Rad zeichnen, berührt die Straße bei (0,0)
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, -wheelRadiusPx, wheelRadiusPx, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // Speichen-Drehung (richtig herum je nach Fahrtrichtung)
+      const rotationAngle = s / wheelRadiusM; // s = r * theta
+      ctx.save();
+      ctx.translate(0, -wheelRadiusPx);
+      ctx.rotate(rotationAngle);
+      ctx.beginPath();
+      ctx.moveTo(-wheelRadiusPx, 0);
+      ctx.lineTo(wheelRadiusPx, 0);
+      ctx.moveTo(0, -wheelRadiusPx);
+      ctx.lineTo(0, wheelRadiusPx);
+      ctx.stroke();
+      ctx.restore();
+
+      // Kräfte als Pfeile entlang der Straße
+      const scale = 3;  // px pro Newton
+      const maxLen = 130;
+
+      function drawForce(F, yOffset, color, label) {
+        if (Math.abs(F) < 0.1) return;
+        const dir = F >= 0 ? 1 : -1; // + = in Fahrtrichtung (nach rechts)
+        const len = Math.min(maxLen, Math.max(10, Math.abs(F) * scale));
+        const x1 = 0;
+        const x2 = dir * len;
+        const y = -wheelRadiusPx + yOffset;
+        drawArrow(ctx, x1, y, x2, y, color);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = "12px system-ui";
+        const textOffset = dir > 0 ? 5 : -5;
+        ctx.textAlign = dir > 0 ? "left" : "right";
+        ctx.fillText(label, x2 + textOffset, y - 4);
+        ctx.restore();
+      }
+
+      drawForce(F_g, -20, "green", "Hangabtrieb");
+      drawForce(F_roll, 0, "orange", "Rollwiderstand");
+      drawForce(F_air, 20, "blue", "Luftwiderstand");
+      drawForce(F_t, 40, "red", "Tretkraft");
+
+      ctx.restore(); // Rad
+      ctx.restore(); // Straße
+    }
+
+    function step(dt) {
+      // Zeit-Schritt begrenzen, falls der Browser laggt
+      dt = Math.min(dt, 0.05);
+
+      const forces = computeForces();
+      const { F_g, F_roll, F_air, F_t, F_mech } = forces;
+
+      const F_net = F_g + F_roll + F_air + F_t + F_mech;
+      const a = F_net / m;
+
+      v += a * dt;
+      if (v > maxV) v = maxV;
+      if (v < -maxV) v = -maxV;
+
+      s += v * dt;
+
+      render(forces);
+      updateTexts({ F_g, F_roll, F_air, F_t }, v);
+    }
+
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      let dtMs = timestamp - lastTime;
+      lastTime = timestamp;
+      const dt = dtMs / 1000;
+
+      if (running) {
+        step(dt);
+      } else {
+        // auch in Pause Anzeige aktuell halten, wenn Slider bewegt wurden
+        const forces = computeForces();
+        render(forces);
+        updateTexts({ F_g: forces.F_g, F_roll: forces.F_roll, F_air: forces.F_air, F_t: forces.F_t }, v);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Szenarien
+    document.querySelectorAll(".scenario-buttons button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sc = btn.dataset.scenario;
+        if (sc === "city") {
+          pedalSlider.value = 15;         // leichtes Treten
+          slopeSlider.value = 0;          // flach
+          surfaceSelect.value = "0.006";  // normale Straße
+          postureSelect.value = "0.7";    // aufrecht
+          v = 0;
+        } else if (sc === "fast") {
+          pedalSlider.value = 40;
+          slopeSlider.value = 0;
+          surfaceSelect.value = "0.003";
+          postureSelect.value = "0.5";
+          v = 0;
+        } else if (sc === "grass") {
+          pedalSlider.value = 35;
+          slopeSlider.value = 0;
+          surfaceSelect.value = "0.05";
+          postureSelect.value = "0.7";
+          v = 0;
+        } else if (sc === "hill") {
+          pedalSlider.value = 0;
+          slopeSlider.value = -6; // bergab (− = bergab)
+          surfaceSelect.value = "0.006";
+          postureSelect.value = "0.5";
+          v = 0;
+        }
+        pedalVal.textContent = pedalSlider.value;
+        slopeVal.textContent = slopeSlider.value;
+      });
+    });
+
+    // Buttons
+    pauseBtn.addEventListener("click", () => {
+      running = !running;
+      pauseBtn.textContent = running ? "Pause" : "Weiter";
+    });
+
+    resetBtn.addEventListener("click", () => {
+      v = 0;
+      s = 0;
+    });
+
+    // Slider-Events
+    [pedalSlider, slopeSlider, surfaceSelect, postureSelect].forEach(el => {
+      el.addEventListener("input", () => {
+        pedalVal.textContent = pedalSlider.value;
+        slopeVal.textContent = slopeSlider.value;
+      });
+    });
+
+    // Startwerte anzeigen & Animation starten
+    pedalVal.textContent = pedalSlider.value;
+    slopeVal.textContent = slopeSlider.value;
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
